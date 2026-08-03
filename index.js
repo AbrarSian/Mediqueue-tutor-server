@@ -5,7 +5,7 @@ const app = express()
 const port = process.env.PORT
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 dontenv.config()
 const uri = process.env.MONGODB_URI;
 
@@ -43,3 +43,33 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
+
+//---------------- tutor api endpoints ----------------
+      
+      // create a tutor
+      app.post("/tutors", async (req, res) => {
+         const tutor = req.body;
+         const result = await tutorCollection.insertOne(tutor);
+         console.log(result);
+
+         res.status(201).json(result);
+      });
+      // get all tutors
+      app.get("tutors", async (req, res) => {
+         const tutors = await tutorCollection.find().toArray();
+         console.log(tutors);
+
+         res.status(200).json(tutors);
+      });
+
+      //get a tutor by id
+      app.get("tutors/:id", async (req, res) => {
+         const { id } = req.params;
+         const tutor = await tutorCollection.findOne({ _id: new ObjectId(id)});
+         console.log(tutor);
+         
+         res.status(200).json(tutor);
+      })
+
+      catch (error) {
+      console.error("Database connection failed:", error);
