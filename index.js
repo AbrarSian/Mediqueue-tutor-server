@@ -71,7 +71,7 @@ async function run() {
           const num = !isNaN(Number(q)) ? Number(q) : null;
 
           conditions.push({
-             $or: [
+            $or: [
               { tutorName: textRegex },
               { subject: textRegex },
               { location: textRegex },
@@ -90,7 +90,7 @@ async function run() {
 
         // Date range
         if (startDate || endDate) {
-           // parse and validate
+          // parse and validate
           let sd, ed;
           if (startDate) {
             sd = new Date(startDate);
@@ -133,7 +133,7 @@ async function run() {
         // final query
         const finalQuery = conditions.length ? { $and: conditions } : {};
 
-        let cursor = tutorCollection.find(finalQuery);
+        let cursor = tutorCollection.find(finalQuery).sort({ _id: -1 });
 
         // to get limited tutor
         if (limit) {
@@ -146,7 +146,7 @@ async function run() {
       } catch (error) {
         console.error("Error fetching tutors:", error);
 
-       res.status(500).json({ message: "Failed to fetch tutors." });
+        res.status(500).json({ message: "Failed to fetch tutors." });
       }
     });
 
@@ -156,6 +156,7 @@ async function run() {
         const { email } = req.params;
         const tutors = await tutorCollection
           .find({ createdBy: email })
+          .sort({ _id: -1 })
           .toArray();
         res.status(200).json(tutors);
       } catch (error) {
@@ -182,7 +183,7 @@ async function run() {
         res.status(500).json({ message: "Failed to fetch tutor." });
       }
     });
-     //Patch: tutors/:id  update tutor field
+    //Patch: tutors/:id  update tutor field
     app.patch("/tutors/:id", async (req, res) => {
       try {
         const { id } = req.params;
@@ -206,11 +207,11 @@ async function run() {
       }
     });
 
-    // Delete: /tutor/:id
-    app.delete("/tutor/:id", async (req, res) => {
+    // Delete: /tutors/:id
+    app.delete("/tutors/:id", async (req, res) => {
       try {
         const { id } = req.params;
-       const result = await tutorCollection.deleteOne({
+        const result = await tutorCollection.deleteOne({
           _id: new ObjectId(id),
         });
 
@@ -248,7 +249,7 @@ async function run() {
         res.status(500).json({ message: "Failed to fetch bookings." });
       }
     });
-     app.post("/bookings", async (req, res) => {
+    app.post("/bookings", async (req, res) => {
       try {
         const { tutorId, tutorName, studentName, studentEmail, studentPhone } =
           req.body;
@@ -315,7 +316,7 @@ async function run() {
         const { id } = req.params;
         const { bookingStatus } = req.body;
 
-        const booking = await bookingCollection.findOne({_id: new ObjectId(id)});
+        const booking = await bookingCollection.findOne({ _id: new ObjectId(id) });
         if (!booking) {
           return res.status(404).json({ message: "Booking not found." });
         }
