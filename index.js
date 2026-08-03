@@ -34,9 +34,48 @@ async function run() {
     const db = client.db("mediqueue");
     const tutorCollection = db.collection("tutors");
     const bookingCollection = db.collection("bookings");
+    const userCollection = db.collection("user");
 
     app.get("/", (req, res) => {
       res.send("express server is running!");
+    });
+
+     // ----------------------------- USER ROUTES -----------------------------
+
+    app.patch("/users/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const { name, image } = req.body;
+
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({ message: "Invalid user ID" });
+        }
+
+        const fields = {};
+
+        if (name !== undefined && name !== "") fields.name = name;
+        if (image !== undefined && image !== "") fields.image = image;
+        if (Object.keys(fields).length === 0) {
+          return res
+            .status(400)
+            .send({ message: "No valid fields provided to update" });
+        }
+
+        const filter = { _id: new ObjectId(id) };
+        const updateDoc = { $set: fields };
+        const result = await userCollection.updateOne(filter, updateDoc);
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        res.send({ success: true, message: "Profile updated successfully" });
+      }
+      catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "Server error" });
+      }
     });
 
     // ----------------------------- TUTOR ROUTES -----------------------------
@@ -316,25 +355,29 @@ async function run() {
         const { id } = req.params;
         const { bookingStatus } = req.body;
 
-        const booking = await bookingCollection.findOne({ _id: new ObjectId(id) });
+        const booking = await bookingCollection.findOne({
+          _id: new ObjectId(id),
+        });
         if (!booking) {
           return res.status(404).json({ message: "Booking not found." });
         }
 
         const result = await bookingCollection.updateOne(
           { _id: new ObjectId(id) },
-          { $set: { bookingStatus } }
+          { $set: { bookingStatus } },
         );
 
         // If the student is cancelling, give the slot back to the tutor
         if (bookingStatus === "cancelled") {
           await tutorCollection.updateOne(
             { _id: new ObjectId(booking.tutorId) },
-            { $inc: { totalSlots: 1 } }
+            { $inc: { totalSlots: 1 } },
           );
         }
 
-        res.status(200).json({ message: "Booking status updated successfully." });
+        res
+          .status(200)
+          .json({ message: "Booking status updated successfully." });
       } catch (error) {
         console.error("Error updating booking:", error);
         res.status(500).json({ message: "Failed to update booking status." });
