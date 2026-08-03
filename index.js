@@ -28,48 +28,19 @@ async function run() {
     await client.connect();
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
-  }
-}
+  
+    const db = client.db('mediqueue');
+      app.get('/', (req, res) => {
+      res.send('Hello World!')
+})
+  } 
+   catch (error) {
+      console.error("Database connection failed:", error);
+   }
 run().catch(console.dir);
 
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
-
-//---------------- tutor api endpoints ----------------
-      
-      // create a tutor
-      app.post("/tutors", async (req, res) => {
-         const tutor = req.body;
-         const result = await tutorCollection.insertOne(tutor);
-         console.log(result);
-
-         res.status(201).json(result);
-      });
-      // get all tutors
-      app.get("tutors", async (req, res) => {
-         const tutors = await tutorCollection.find().toArray();
-         console.log(tutors);
-
-         res.status(200).json(tutors);
-      });
-
-      //get a tutor by id
-      app.get("tutors/:id", async (req, res) => {
-         const { id } = req.params;
-         const tutor = await tutorCollection.findOne({ _id: new ObjectId(id)});
-         console.log(tutor);
-         
-         res.status(200).json(tutor);
-      })
-
-      catch (error) {
-      console.error("Database connection failed:", error);
+}
