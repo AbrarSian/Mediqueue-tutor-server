@@ -4,6 +4,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 const express = require("express")
 const dotenv = require("dotenv");
 const cors = require("cors");
+const { createRemoteJWKSet, jwtVerify } = require("jose");
 const app = express();
 const port = process.env.PORT;
 
@@ -23,8 +24,36 @@ const client = new MongoClient(uri, {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
 });
+// jwt validation
+const JWKS = createRemoteJWKSet(
+  new URL(process.env.JWKS_URL)
+)
+// middleware to verify token
+const verifyToken = async (req, res, next) => {
+  const authHeader = req?.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: "unauthorized" });
+  }
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ message: "unauthorized" });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS)
+    // console.log(payload)
+    next()
+  }
+  catch (error) {
+    console.error(error)
+    return res.status(401).json({ message: "unauthorized" })
+  }
+};
+
+
 
 async function run() {
   try {
@@ -42,7 +71,8 @@ async function run() {
 
      // ----------------------------- USER ROUTES -----------------------------
 
-    app.patch("/users/:id", async (req, res) => {
+     // Update user: /users/:id
+    app.patch("/users/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -81,7 +111,7 @@ async function run() {
     // ----------------------------- TUTOR ROUTES -----------------------------
 
     // POST: /tutors — Create a new tutor
-    app.post("/tutors", async (req, res) => {
+   app.post("/tutors", verifyToken, async (req, res) => {
       try {
         const tutor = req.body;
         const result = await tutorCollection.insertOne(tutor);
@@ -190,7 +220,7 @@ async function run() {
     });
 
     // GET: /tutors/user/:email — Get all tutors added by a specific user (My Tutors page)
-    app.get("/tutors/user/:email", async (req, res) => {
+   app.get("/tutors/user/:email", verifyToken, async (req, res) => {
       try {
         const { email } = req.params;
         const tutors = await tutorCollection
@@ -205,7 +235,7 @@ async function run() {
     });
 
     // GET /tutors/:id — Get a single tutor by MongoDB ObjectId
-    app.get("/tutors/:id", async (req, res) => {
+    app.get("/tutors/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
         const tutor = await tutorCollection.findOne({
@@ -223,7 +253,7 @@ async function run() {
       }
     });
     //Patch: tutors/:id  update tutor field
-    app.patch("/tutors/:id", async (req, res) => {
+   app.patch("/tutors/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
         const updates = req.body;
@@ -246,8 +276,8 @@ async function run() {
       }
     });
 
-    // Delete: /tutors/:id
-    app.delete("/tutors/:id", async (req, res) => {
+    // Delete tutor: /tutor/:id
+    app.delete("/tutors/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
         const result = await tutorCollection.deleteOne({
@@ -265,7 +295,7 @@ async function run() {
     });
     // ------------------ Bookings -------------------
     // Get all bookings
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", verifyToken, async (req, res) => {
       try {
         const bookings = await bookingCollection.find().toArray();
         res.status(200).json(bookings);
@@ -288,7 +318,8 @@ async function run() {
         res.status(500).json({ message: "Failed to fetch bookings." });
       }
     });
-    app.post("/bookings", async (req, res) => {
+   // create booking
+    app.post("/bookings", verifyToken, async (req, res) => {
       try {
         const { tutorId, tutorName, studentName, studentEmail, studentPhone } =
           req.body;
@@ -350,7 +381,8 @@ async function run() {
         res.status(500).json({ message: "Failed to create booking." });
       }
     });
-    app.patch("/bookings/:id", async (req, res) => {
+     // update booking status api route
+    app.patch("/bookings/:id", verifyToken, async (req, res) => {
       try {
         const { id } = req.params;
         const { bookingStatus } = req.body;
